@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Location</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 20%;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .welcome {
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .nav {
+            width: 100%;
+        }
+        .nav-item {
+            display: block;
+            padding: 15px;
+            background-color: #34495e;
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .nav-item:hover {
+            background-color: #1abc9c;
+        }
+        .main-content {
+            width: 80%;
+            margin-left: 20%;
+            display: flex;
+            flex-direction: column;
+            padding: 40px;
+            overflow-y: auto;
+        }
+        .header {
+            background-color: #3498db;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .content {
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #map {
+            height: 500px;
+            width: 100%;
+            margin: 20px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        #activitiesList {
+            margin: 20px 0;
+        }
+        #activitiesList ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        #activitiesList li {
+            padding: 10px;
+            background-color: #ecf0f1;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="welcome">Welcome, User</div>
+            <nav class="nav">
+                <a href="#" class="nav-item">Profile</a>
+                <a href="#" class="nav-item">Locations</a>
+                <a href="#" class="nav-item">Dashboard</a>
+                <a href="#" class="nav-item">Create Custom Package</a>
+                <a href="#" class="nav-item">Log Out</a>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <header class="header">Add New Location</header>
+            <div class="content">
+                <label for="locationName">Location Name:</label>
+                <input type="text" id="locationName" required>
+                <button onclick="fetchLocationData()">Fetch Location Data</button>
+                <div id="locationDetails"></div>
+                <div id="activitiesList"></div>
+                <div id="map"></div>
+            </div>
+        </main>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let locationMarker;
+        let activityMarkers = [];
+
+        function fetchLocationData() {
+            var locationName = document.getElementById('locationName').value;
+            var url = `https://nominatim.openstreetmap.org/search?q=${locationName}&format=json&limit=1`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        var result = data[0];
+                        document.getElementById('locationDetails').innerHTML = `
+                            <p><strong>Name:</strong> ${result.display_name}</p>
+                            <p><strong>Latitude:</strong> ${result.lat}</p>
+                            <p><strong>Longitude:</strong> ${result.lon}</p>
+                            <button onclick="addLocation('${result.display_name}', ${result.lat}, ${result.lon})">Add Location</button>
+                            <button onclick="fetchActivities(${result.lat}, ${result.lon})">Fetch Things to Do</button>
+                        `;
+                        showMap(result.lat, result.lon);
+                    } else {
+                        document.getElementById('locationDetails').innerHTML = 'Location not found.';
+                    }
+                })
+                .catch(error => console.error('Error fetching location data:', error));
+        }
+
+        function addLocation(name, lat, lon) {
+            console.log(`Name: ${name}, Latitude: ${lat}, Longitude: ${lon}`);
+            alert(`Location added: ${name}`);
+        }
+
+        function showMap(lat, lon) {
+            if (map) {
+                map.setView([lat, lon], 13);
+                locationMarker.setLatLng([lat, lon]);
+            } else {
+                map = L.map('map').setView([lat, lon], 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+                locationMarker = L.marker([lat, lon]).addTo(map);
+            }
+        }
+
+        function fetchActivities(lat, lon) {
+            var url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gsradius=10000&gscoord=${lat}|${lon}&format=json&origin=*`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.query.geosearch && data.query.geosearch.length > 0) {
+                        var activitiesHtml = '<ul>';
+                        data.query.geosearch.forEach(activity => {
+                            activitiesHtml += `<li>${activity.title}</li>`;
+                            addActivityMarker(activity.lat, activity.lon, activity.title);
+                        });
+                        activitiesHtml += '</ul>';
+                        document.getElementById('activitiesList').innerHTML = activitiesHtml;
+                    } else {
+                        document.getElementById('activitiesList').innerHTML = 'No activities found.';
+                    }
+                })
+                .catch(error => console.error('Error fetching activities:', error));
+        }
+
+        function addActivityMarker(lat, lon, title) {
+            var marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup(`<b>${title}</b>`);
+            activityMarkers.push(marker);
+        }
+    </script>
+</body>
+</html>
